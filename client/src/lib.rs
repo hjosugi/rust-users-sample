@@ -28,7 +28,9 @@ pub struct ClientState {
 }
 
 /// Which API call the user picked. The hidden `op` field in each form sets it.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Deserialize,
+)]
 #[serde(rename_all = "lowercase")]
 pub enum Op {
     List,
@@ -77,7 +79,10 @@ pub fn app(api_base: impl Into<String>) -> Router {
         .expect("failed to build HTTP client");
     let state = ClientState {
         http,
-        api_base: api_base.into().trim_end_matches('/').to_string(),
+        api_base: api_base
+            .into()
+            .trim_end_matches('/')
+            .to_string(),
     };
 
     let app = Router::new()
@@ -88,43 +93,79 @@ pub fn app(api_base: impl Into<String>) -> Router {
     // Opt in with --features dev. Never auto-reload a form POST: the browser
     // could repeat a create/update/delete request when reloading that page.
     #[cfg(feature = "dev")]
-    let app = app.layer(tower_livereload::LiveReloadLayer::new().request_predicate(
-        |request: &axum::http::Request<axum::body::Body>| request.method() == Method::GET,
-    ));
+    let app = app.layer(
+        tower_livereload::LiveReloadLayer::new()
+            .request_predicate(
+                |request: &axum::http::Request<
+                    axum::body::Body,
+                >| {
+                    request.method() == Method::GET
+                },
+            ),
+    );
 
     app
 }
 
 /// GET / -> run "list users" once, so the first page is not empty.
-async fn index(State(state): State<ClientState>) -> Html<String> {
+async fn index(
+    State(state): State<ClientState>,
+) -> Html<String> {
     let values = FormValues::default();
     let call = state.execute(Op::List, &values).await;
-    Html(render::page(&state.api_base, Op::List, &values, &call))
+    Html(render::page(
+        &state.api_base,
+        Op::List,
+        &values,
+        &call,
+    ))
 }
 
 /// POST /run -> call the API, then show the result.
-async fn run(State(state): State<ClientState>, Form(form): Form<RunForm>) -> Html<String> {
+async fn run(
+    State(state): State<ClientState>,
+    Form(form): Form<RunForm>,
+) -> Html<String> {
     let call = state.execute(form.op, &form.values).await;
-    Html(render::page(&state.api_base, form.op, &form.values, &call))
+    Html(render::page(
+        &state.api_base,
+        form.op,
+        &form.values,
+        &call,
+    ))
 }
 
 impl ClientState {
     /// Turn (op, form values) into one HTTP request, then send it.
-    async fn execute(&self, op: Op, v: &FormValues) -> api::ApiCall {
+    async fn execute(
+        &self,
+        op: Op,
+        v: &FormValues,
+    ) -> api::ApiCall {
         let base = &self.api_base;
         // Encode the id, so input like "1/2" or "a?b" cannot change the URL.
         let id = encode_segment(v.id.trim());
 
         let (method, url, body) = match op {
-            Op::List => (Method::GET, format!("{base}/users"), None),
-            Op::Get => (Method::GET, format!("{base}/users/{id}"), None),
+            Op::List => {
+                (Method::GET, format!("{base}/users"), None)
+            }
+            Op::Get => (
+                Method::GET,
+                format!("{base}/users/{id}"),
+                None,
+            ),
             Op::Create => {
                 // Send the input as is. The server does the validation.
                 let body = CreateUser {
                     name: v.name.clone(),
                     email: v.email.clone(),
                 };
-                (Method::POST, format!("{base}/users"), Some(to_json(&body)))
+                (
+                    Method::POST,
+                    format!("{base}/users"),
+                    Some(to_json(&body)),
+                )
             }
             Op::Update => {
                 // Empty input means "do not change this field".
@@ -138,7 +179,11 @@ impl ClientState {
                     Some(to_json(&body)),
                 )
             }
-            Op::Delete => (Method::DELETE, format!("{base}/users/{id}"), None),
+            Op::Delete => (
+                Method::DELETE,
+                format!("{base}/users/{id}"),
+                None,
+            ),
         };
 
         api::call(&self.http, method, url, body).await
@@ -146,8 +191,11 @@ impl ClientState {
 }
 
 /// Any `Serialize` type -> `serde_json::Value`. Generic, so it works for both bodies.
-fn to_json<T: serde::Serialize>(body: &T) -> serde_json::Value {
-    serde_json::to_value(body).expect("our types always serialize")
+fn to_json<T: serde::Serialize>(
+    body: &T,
+) -> serde_json::Value {
+    serde_json::to_value(body)
+        .expect("our types always serialize")
 }
 
 fn non_empty(s: &str) -> Option<String> {
@@ -159,7 +207,8 @@ fn non_empty(s: &str) -> Option<String> {
 fn encode_segment(s: &str) -> String {
     let mut out = String::new();
     for b in s.bytes() {
-        if b.is_ascii_alphanumeric() || b"-._~".contains(&b) {
+        if b.is_ascii_alphanumeric() || b"-._~".contains(&b)
+        {
             out.push(b as char);
         } else {
             out.push_str(&format!("%{b:02X}"));

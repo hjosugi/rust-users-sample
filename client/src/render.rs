@@ -35,7 +35,10 @@ const FORMS: &[FormSpec] = &[
         method: "POST",
         path: "/users",
         button: "Create user",
-        fields: &[("name", "e.g. Carol"), ("email", "e.g. carol@example.com")],
+        fields: &[
+            ("name", "e.g. Carol"),
+            ("email", "e.g. carol@example.com"),
+        ],
     },
     FormSpec {
         op: Op::Update,
@@ -58,7 +61,12 @@ const FORMS: &[FormSpec] = &[
 ];
 
 /// The whole page. `last_op` and `values` come from the form the user just sent.
-pub fn page(api_base: &str, last_op: Op, values: &FormValues, call: &ApiCall) -> String {
+pub fn page(
+    api_base: &str,
+    last_op: Op,
+    values: &FormValues,
+    call: &ApiCall,
+) -> String {
     // Iterator -> String: `collect()` joins every form into one string.
     let forms: String = FORMS
         .iter()
@@ -96,7 +104,11 @@ pub fn page(api_base: &str, last_op: Op, values: &FormValues, call: &ApiCall) ->
 
 /// One form. Only the form the user just sent keeps its values.
 /// So a "Create" does not leave text in the "Update" form by mistake.
-fn form(spec: &FormSpec, last_op: Op, v: &FormValues) -> String {
+fn form(
+    spec: &FormSpec,
+    last_op: Op,
+    v: &FormValues,
+) -> String {
     let fields: String = spec
         .fields
         .iter()
@@ -133,7 +145,10 @@ fn form(spec: &FormSpec, last_op: Op, v: &FormValues) -> String {
     )
 }
 
-fn field_value<'a>(v: &'a FormValues, name: &str) -> &'a str {
+fn field_value<'a>(
+    v: &'a FormValues,
+    name: &str,
+) -> &'a str {
     match name {
         "id" => &v.id,
         "name" => &v.name,
@@ -146,7 +161,9 @@ fn field_value<'a>(v: &'a FormValues, name: &str) -> &'a str {
 fn result_block(call: &ApiCall) -> String {
     let request_body = match &call.request_body {
         Some(b) => format!("<pre>{}</pre>", escape(b)),
-        None => r#"<p class="muted">(no body)</p>"#.to_string(),
+        None => {
+            r#"<p class="muted">(no body)</p>"#.to_string()
+        }
     };
 
     let response = match &call.result {
@@ -160,7 +177,8 @@ fn result_block(call: &ApiCall) -> String {
                 "err"
             };
             let body = if res.body.is_empty() {
-                r#"<p class="muted">(empty body)</p>"#.to_string()
+                r#"<p class="muted">(empty body)</p>"#
+                    .to_string()
             } else {
                 format!("<pre>{}</pre>", escape(&res.body))
             };

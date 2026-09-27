@@ -10,13 +10,18 @@ async fn main() {
     tracing_subscriber::fmt()
         .with_env_filter(
             EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| EnvFilter::new("info,tower_http=debug")),
+                .unwrap_or_else(|_| {
+                    EnvFilter::new("info,tower_http=debug")
+                }),
         )
         .init();
 
     // Add two sample users, so the list is not empty on first run.
     let store = Arc::new(UserStore::new());
-    for (name, email) in [("Alice", "alice@example.com"), ("Bob", "bob@example.com")] {
+    for (name, email) in [
+        ("Alice", "alice@example.com"),
+        ("Bob", "bob@example.com"),
+    ] {
         store
             .create(CreateUser {
                 name: name.into(),
@@ -25,7 +30,8 @@ async fn main() {
             .expect("seed data must be valid");
     }
 
-    let port = std::env::var("PORT").unwrap_or_else(|_| "3000".into());
+    let port = std::env::var("PORT")
+        .unwrap_or_else(|_| "3000".into());
     let addr = format!("127.0.0.1:{port}");
     let listener = tokio::net::TcpListener::bind(&addr)
         .await

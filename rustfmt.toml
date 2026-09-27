@@ -1,0 +1,2 @@
+# Wrap the whole line at roughly 60 columns.
+max_width = 60

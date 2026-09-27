@@ -17,22 +17,35 @@ fn new_app() -> Router {
 }
 
 /// Send one request. Return the status and the body as JSON (Null if empty).
-async fn send(app: &Router, method: &str, uri: &str, body: Option<Value>) -> (StatusCode, Value) {
-    let mut req = Request::builder().method(method).uri(uri);
+async fn send(
+    app: &Router,
+    method: &str,
+    uri: &str,
+    body: Option<Value>,
+) -> (StatusCode, Value) {
+    let mut req =
+        Request::builder().method(method).uri(uri);
     let body = match body {
         Some(v) => {
-            req = req.header("content-type", "application/json");
+            req = req
+                .header("content-type", "application/json");
             Body::from(v.to_string())
         }
         None => Body::empty(),
     };
     // `oneshot` takes ownership, so we clone the router. The clone is cheap.
-    let res = app.clone().oneshot(req.body(body).unwrap()).await.unwrap();
+    let res = app
+        .clone()
+        .oneshot(req.body(body).unwrap())
+        .await
+        .unwrap();
     let status = res.status();
-    let bytes = res.into_body().collect().await.unwrap().to_bytes();
+    let bytes =
+        res.into_body().collect().await.unwrap().to_bytes();
     (
         status,
-        serde_json::from_slice(&bytes).unwrap_or(Value::Null),
+        serde_json::from_slice(&bytes)
+            .unwrap_or(Value::Null),
     )
 }
 
@@ -92,7 +105,8 @@ async fn crud_flow() {
     assert_eq!(ids, vec![1, 2]);
 
     // Delete, then it is gone.
-    let (s, b) = send(&app, "DELETE", "/users/1", None).await;
+    let (s, b) =
+        send(&app, "DELETE", "/users/1", None).await;
     assert_eq!(s, StatusCode::NO_CONTENT);
     assert_eq!(b, Value::Null);
     let (s, _) = send(&app, "GET", "/users/1", None).await;
@@ -107,9 +121,13 @@ async fn not_found_is_json() {
         ("PUT", Some(json!({"name": "x"}))),
         ("DELETE", None),
     ] {
-        let (s, b) = send(&app, method, "/users/99", body).await;
+        let (s, b) =
+            send(&app, method, "/users/99", body).await;
         assert_eq!(s, StatusCode::NOT_FOUND, "{method}");
-        assert_eq!(b, json!({"error": "user 99 not found"}));
+        assert_eq!(
+            b,
+            json!({"error": "user 99 not found"})
+        );
     }
 }
 
@@ -134,7 +152,12 @@ async fn validation_errors_are_400() {
     )
     .await;
     assert_eq!(s, StatusCode::BAD_REQUEST);
-    assert!(b["error"].as_str().unwrap().starts_with("invalid email"));
+    assert!(
+        b["error"]
+            .as_str()
+            .unwrap()
+            .starts_with("invalid email")
+    );
 }
 
 #[tokio::test]
@@ -144,14 +167,18 @@ async fn duplicate_email_is_409() {
         &app,
         "POST",
         "/users",
-        Some(json!({"name": "A", "email": "a@example.com"})),
+        Some(
+            json!({"name": "A", "email": "a@example.com"}),
+        ),
     )
     .await;
     send(
         &app,
         "POST",
         "/users",
-        Some(json!({"name": "B", "email": "b@example.com"})),
+        Some(
+            json!({"name": "B", "email": "b@example.com"}),
+        ),
     )
     .await;
 
@@ -160,7 +187,9 @@ async fn duplicate_email_is_409() {
         &app,
         "POST",
         "/users",
-        Some(json!({"name": "C", "email": "A@example.com"})),
+        Some(
+            json!({"name": "C", "email": "A@example.com"}),
+        ),
     )
     .await;
     assert_eq!(s, StatusCode::CONFLICT);
@@ -191,12 +220,19 @@ async fn bad_input_gets_json_error_too() {
     let app = new_app();
 
     // Missing field -> 422 from the Json extractor, but in our JSON format.
-    let (s, b) = send(&app, "POST", "/users", Some(json!({"name": "A"}))).await;
+    let (s, b) = send(
+        &app,
+        "POST",
+        "/users",
+        Some(json!({"name": "A"})),
+    )
+    .await;
     assert_eq!(s, StatusCode::UNPROCESSABLE_ENTITY);
     assert!(b["error"].as_str().unwrap().contains("email"));
 
     // Not a number -> 400 from the Path extractor.
-    let (s, b) = send(&app, "GET", "/users/abc", None).await;
+    let (s, b) =
+        send(&app, "GET", "/users/abc", None).await;
     assert_eq!(s, StatusCode::BAD_REQUEST);
     assert!(b["error"].is_string());
 

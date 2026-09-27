@@ -13,23 +13,33 @@ use tower::ServiceExt;
 /// Start the real API server on a free port. Return its base URL.
 async fn start_api_server() -> String {
     // Port 0 = "OS, please pick a free port".
-    let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let listener =
+        tokio::net::TcpListener::bind("127.0.0.1:0")
+            .await
+            .unwrap();
     let addr = listener.local_addr().unwrap();
-    let api = server::app(Arc::new(server::UserStore::new()));
+    let api =
+        server::app(Arc::new(server::UserStore::new()));
     // Run the server in the background for the rest of the test.
-    tokio::spawn(async move { axum::serve(listener, api).await.unwrap() });
+    tokio::spawn(async move {
+        axum::serve(listener, api).await.unwrap()
+    });
     format!("http://{addr}")
 }
 
 async fn get_page(app: &Router) -> String {
-    let req = Request::get("/").body(Body::empty()).unwrap();
+    let req =
+        Request::get("/").body(Body::empty()).unwrap();
     read(app.clone().oneshot(req).await.unwrap()).await
 }
 
 /// Send a form like the browser does.
 async fn post_form(app: &Router, form: &str) -> String {
     let req = Request::post("/run")
-        .header("content-type", "application/x-www-form-urlencoded")
+        .header(
+            "content-type",
+            "application/x-www-form-urlencoded",
+        )
         .body(Body::from(form.to_string()))
         .unwrap();
     read(app.clone().oneshot(req).await.unwrap()).await
@@ -37,7 +47,8 @@ async fn post_form(app: &Router, form: &str) -> String {
 
 async fn read(res: axum::response::Response) -> String {
     assert_eq!(res.status(), StatusCode::OK);
-    let bytes = res.into_body().collect().await.unwrap().to_bytes();
+    let bytes =
+        res.into_body().collect().await.unwrap().to_bytes();
     String::from_utf8(bytes.to_vec()).unwrap()
 }
 
@@ -51,11 +62,15 @@ async fn index_shows_list_result() {
 }
 
 #[tokio::test]
-async fn live_reload_is_opt_in_and_never_repeats_form_posts() {
+async fn live_reload_is_opt_in_and_never_repeats_form_posts()
+ {
     let api_base = start_api_server().await;
     let app = client::app(&api_base);
     let html = get_page(&app).await;
-    assert_eq!(html.contains("data-event-stream="), cfg!(feature = "dev"));
+    assert_eq!(
+        html.contains("data-event-stream="),
+        cfg!(feature = "dev")
+    );
 
     let stream = app
         .clone()
@@ -68,13 +83,20 @@ async fn live_reload_is_opt_in_and_never_repeats_form_posts() {
         .unwrap();
     if cfg!(feature = "dev") {
         assert_eq!(stream.status(), StatusCode::OK);
-        assert_eq!(stream.headers()["content-type"], "text/event-stream");
+        assert_eq!(
+            stream.headers()["content-type"],
+            "text/event-stream"
+        );
     } else {
         assert_eq!(stream.status(), StatusCode::NOT_FOUND);
     }
     drop(stream); // The event stream stays open until the browser disconnects.
 
-    let html = post_form(&app, "op=create&name=Alice&email=alice%40example.com").await;
+    let html = post_form(
+        &app,
+        "op=create&name=Alice&email=alice%40example.com",
+    )
+    .await;
     assert!(html.contains("201 Created"));
     assert!(!html.contains("data-event-stream="));
 }
@@ -84,10 +106,18 @@ async fn full_crud_through_the_page() {
     let app = client::app(start_api_server().await);
 
     // Create. `%40` is "@" in a form body.
-    let html = post_form(&app, "op=create&name=Alice&email=alice%40example.com").await;
+    let html = post_form(
+        &app,
+        "op=create&name=Alice&email=alice%40example.com",
+    )
+    .await;
     assert!(html.contains("POST http://"));
     assert!(html.contains("201 Created"));
-    assert!(html.contains("&quot;name&quot;: &quot;Alice&quot;"));
+    assert!(
+        html.contains(
+            "&quot;name&quot;: &quot;Alice&quot;"
+        )
+    );
     // Only the Create form keeps the input. The Update form stays empty.
     assert_eq!(html.matches(r#"value="Alice""#).count(), 1);
 
@@ -97,10 +127,20 @@ async fn full_crud_through_the_page() {
     assert!(html.contains("200 OK"));
 
     // Update: empty email is not sent.
-    let html = post_form(&app, "op=update&id=1&name=Alicia&email=").await;
+    let html = post_form(
+        &app,
+        "op=update&id=1&name=Alicia&email=",
+    )
+    .await;
     assert!(html.contains("200 OK"));
-    assert!(html.contains("&quot;name&quot;: &quot;Alicia&quot;"));
-    assert!(!html.contains("&quot;email&quot;: &quot;&quot;"));
+    assert!(
+        html.contains(
+            "&quot;name&quot;: &quot;Alicia&quot;"
+        )
+    );
+    assert!(
+        !html.contains("&quot;email&quot;: &quot;&quot;")
+    );
 
     // Delete: 204 has no body.
     let html = post_form(&app, "op=delete&id=1").await;
@@ -117,7 +157,8 @@ async fn full_crud_through_the_page() {
 async fn server_errors_are_shown_raw() {
     let app = client::app(start_api_server().await);
 
-    let html = post_form(&app, "op=create&name=&email=x").await;
+    let html =
+        post_form(&app, "op=create&name=&email=x").await;
     assert!(html.contains("400 Bad Request"));
     assert!(html.contains("name must not be empty"));
 
@@ -135,7 +176,11 @@ async fn html_is_escaped() {
     )
     .await;
     assert!(!html.contains("<script>alert(1)</script>"));
-    assert!(html.contains("&lt;script&gt;alert(1)&lt;/script&gt;"));
+    assert!(
+        html.contains(
+            "&lt;script&gt;alert(1)&lt;/script&gt;"
+        )
+    );
 }
 
 #[tokio::test]

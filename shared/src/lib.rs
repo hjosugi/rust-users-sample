@@ -4,7 +4,9 @@
 use serde::{Deserialize, Serialize};
 
 /// A user. The server returns this as JSON.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, PartialEq, Eq, Serialize, Deserialize,
+)]
 pub struct User {
     pub id: u64,
     pub name: String,

@@ -45,10 +45,19 @@ impl From<PathRejection> for AppError {
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, error) = match self {
-            AppError::NotFound(id) => (StatusCode::NOT_FOUND, format!("user {id} not found")),
-            AppError::Validation(msg) => (StatusCode::BAD_REQUEST, msg),
-            AppError::Conflict(msg) => (StatusCode::CONFLICT, msg),
-            AppError::Rejection { status, message } => (status, message),
+            AppError::NotFound(id) => (
+                StatusCode::NOT_FOUND,
+                format!("user {id} not found"),
+            ),
+            AppError::Validation(msg) => {
+                (StatusCode::BAD_REQUEST, msg)
+            }
+            AppError::Conflict(msg) => {
+                (StatusCode::CONFLICT, msg)
+            }
+            AppError::Rejection { status, message } => {
+                (status, message)
+            }
         };
         (status, Json(ErrorBody { error })).into_response()
     }

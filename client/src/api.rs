@@ -63,7 +63,8 @@ pub async fn call(
 }
 
 fn to_pretty(v: &Value) -> String {
-    serde_json::to_string_pretty(v).unwrap_or_else(|_| v.to_string())
+    serde_json::to_string_pretty(v)
+        .unwrap_or_else(|_| v.to_string())
 }
 
 /// Try to parse as JSON and pretty-print. If that fails, keep the text as is.

@@ -42,7 +42,9 @@ pub fn app(store: AppState) -> Router {
         // axum 0.8 writes path params as `{id}` (older versions used `:id`).
         .route(
             "/users/{id}",
-            get(get_user).put(update_user).delete(delete_user),
+            get(get_user)
+                .put(update_user)
+                .delete(delete_user),
         )
         // Unknown paths also get a JSON error, not an empty 404.
         .fallback(|| async {
@@ -61,7 +63,9 @@ pub fn app(store: AppState) -> Router {
 // We take `Result<Json<T>, JsonRejection>` instead of `Json<T>`.
 // Then `?` turns a bad body into our own JSON error (see error.rs).
 
-async fn list_users(State(store): State<AppState>) -> Json<Vec<User>> {
+async fn list_users(
+    State(store): State<AppState>,
+) -> Json<Vec<User>> {
     Json(store.list())
 }
 
