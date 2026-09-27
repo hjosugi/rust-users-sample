@@ -1,0 +1,10 @@
+[package]
+name = "sandbox"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+reqwest = { version = "0.13.5", default-features = false, features = ["json"] }
+shared = { version = "0.1.0", path = "../shared" }
+tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread"] }

@@ -80,10 +80,19 @@ pub fn app(api_base: impl Into<String>) -> Router {
         api_base: api_base.into().trim_end_matches('/').to_string(),
     };
 
-    Router::new()
+    let app = Router::new()
         .route("/", get(index))
         .route("/run", post(run))
-        .with_state(state)
+        .with_state(state);
+
+    // Opt in with --features dev. Never auto-reload a form POST: the browser
+    // could repeat a create/update/delete request when reloading that page.
+    #[cfg(feature = "dev")]
+    let app = app.layer(tower_livereload::LiveReloadLayer::new().request_predicate(
+        |request: &axum::http::Request<axum::body::Body>| request.method() == Method::GET,
+    ));
+
+    app
 }
 
 /// GET / -> run "list users" once, so the first page is not empty.

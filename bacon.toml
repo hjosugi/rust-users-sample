@@ -1,0 +1,35 @@
+#:schema https://dystroy.org/bacon/.bacon.schema.json
+
+default_job = "check"
+default_watch = false
+watch = ["Cargo.toml", "Cargo.lock", "client", "server", "shared", "sandbox"]
+
+[jobs.check]
+command = ["cargo", "check", "--workspace", "--all-targets", "--all-features", "--locked"]
+
+[jobs.test]
+command = ["cargo", "test", "--workspace", "--all-features", "--locked"]
+need_stdout = true
+
+[jobs.clippy]
+command = ["cargo", "clippy", "--workspace", "--all-targets", "--all-features", "--locked", "--", "-D", "warnings"]
+
+# Run these in separate terminals from the workspace root.
+# Editing the UI leaves the API's in-memory users intact.
+[jobs.server]
+command = ["cargo", "run", "--locked", "-p", "server"]
+watch = ["Cargo.toml", "Cargo.lock", "server/src", "server/Cargo.toml", "shared"]
+need_stdout = true
+background = false
+on_change_strategy = "kill_then_restart"
+allow_warnings = true
+scroll_anchor = "auto"
+
+[jobs.client]
+command = ["cargo", "run", "--locked", "-p", "client", "--features", "dev"]
+watch = ["Cargo.toml", "Cargo.lock", "client/src", "client/Cargo.toml", "shared"]
+need_stdout = true
+background = false
+on_change_strategy = "kill_then_restart"
+allow_warnings = true
+scroll_anchor = "auto"

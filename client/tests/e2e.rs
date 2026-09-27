@@ -51,6 +51,35 @@ async fn index_shows_list_result() {
 }
 
 #[tokio::test]
+async fn live_reload_is_opt_in_and_never_repeats_form_posts() {
+    let api_base = start_api_server().await;
+    let app = client::app(&api_base);
+    let html = get_page(&app).await;
+    assert_eq!(html.contains("data-event-stream="), cfg!(feature = "dev"));
+
+    let stream = app
+        .clone()
+        .oneshot(
+            Request::get("/_tower-livereload/event-stream")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    if cfg!(feature = "dev") {
+        assert_eq!(stream.status(), StatusCode::OK);
+        assert_eq!(stream.headers()["content-type"], "text/event-stream");
+    } else {
+        assert_eq!(stream.status(), StatusCode::NOT_FOUND);
+    }
+    drop(stream); // The event stream stays open until the browser disconnects.
+
+    let html = post_form(&app, "op=create&name=Alice&email=alice%40example.com").await;
+    assert!(html.contains("201 Created"));
+    assert!(!html.contains("data-event-stream="));
+}
+
+#[tokio::test]
 async fn full_crud_through_the_page() {
     let app = client::app(start_api_server().await);
 

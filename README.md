@@ -47,6 +47,64 @@ cargo run -p client        # http://127.0.0.1:8080  <- open this
 The server starts with two sample users (Alice, Bob).
 Data is in memory. It is lost when the server stops.
 
+## Develop with auto-reload
+
+Install [Bacon](https://dystroy.org/bacon/) once (tested with 3.26.0):
+
+```sh
+cargo install --locked bacon --version 3.26.0
+```
+
+From the workspace root, use two terminals:
+
+```sh
+# Terminal 1: API, http://127.0.0.1:3000
+bacon server
+
+# Terminal 2: web page, http://127.0.0.1:8080
+bacon client
+```
+
+Open `http://127.0.0.1:8080/`. Save a file to rebuild and restart the affected app.
+The client enables the optional `dev` feature, which adds
+[tower-livereload](https://docs.rs/tower-livereload/0.10.3/tower_livereload/).
+The browser reconnects after the client restarts and reloads the page.
+Use `q` or `Ctrl+C` to stop each watcher.
+
+| Change | What restarts |
+|--------|---------------|
+| `client/src/` | Client; browser reloads |
+| `server/src/` | API; refresh the page to see the new API result |
+| `shared/`, workspace manifest, or lockfile | Both apps |
+
+Editing the client preserves the API's users. Restarting the API resets them to
+Alice and Bob. This is rebuild + restart + browser reload; it does not preserve
+process state. Compilation errors appear in Bacon; saving a fix starts the app again.
+After a shared change, the two builds may finish at different times. Refresh once
+both apps are ready if the page shows an API connection error.
+
+Auto-reload applies to GET pages only. The result of a form submission is a POST
+page: automatically reloading it could repeat a create, update, or delete. Return
+to `/` to resume auto-reload after submitting a form.
+
+For continuous checks, use another terminal:
+
+```sh
+bacon          # check the workspace, including tests and the dev feature
+bacon test     # rerun tests on changes
+bacon clippy   # rerun Clippy, with warnings treated as errors
+```
+
+The jobs live in `bacon.toml`. They watch source files and manifests, keeping build
+output out of the watch set. Run them from the workspace root. The normal
+`cargo run -p client` and `cargo build --release` commands leave live reload disabled;
+enable `--features dev` only for local development.
+
+Why Bacon: [cargo-watch is archived and its author recommends Bacon or Watchexec](https://github.com/watchexec/cargo-watch#maintenance).
+The restart jobs follow [Bacon's long-running program configuration](https://dystroy.org/bacon/cookbook/#long-running-programs).
+
+## Configuration
+
 Settings:
 
 | Env var        | Used by | Default                 |
@@ -109,9 +167,10 @@ rust-user-crud/
 ## Test
 
 ```sh
-cargo test                              # all 12 tests
-cargo clippy --all-targets -- -D warnings
-cargo fmt --all
+cargo test --workspace --locked                 # normal builds
+cargo test --workspace --all-features --locked  # include live-reload checks
+cargo clippy --workspace --all-targets --all-features --locked -- -D warnings
+cargo fmt --all -- --check
 ```
 
 ## Learning map

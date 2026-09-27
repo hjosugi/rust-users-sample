@@ -3,6 +3,9 @@ name = "client"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+dev = ["dep:tower-livereload"]
+
 [dependencies]
 axum = "0.8.9"
 reqwest = { version = "0.13.5", default-features = false, features = ["json"] }
@@ -10,6 +13,7 @@ serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.151", features = ["preserve_order"] }
 shared = { version = "0.1.0", path = "../shared" }
 tokio = { version = "1.53.1", features = ["full"] }
+tower-livereload = { version = "0.10.3", optional = true }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
 
